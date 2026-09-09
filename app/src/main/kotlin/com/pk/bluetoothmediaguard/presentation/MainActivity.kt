@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pk.bluetoothmediaguard.BuildConfig
 import com.pk.bluetoothmediaguard.domain.GuardSettings
 import com.pk.bluetoothmediaguard.domain.MediaBlockerEngine
 import com.pk.bluetoothmediaguard.domain.RegistroDeEvento
@@ -99,7 +100,20 @@ private fun TelaPrincipal(
                     Switch(checked = s.enabled, onCheckedChange = { vm.alternarBloqueio(it) })
                 }
 
-                if (!capacidades.acessoANotificacoes) {
+                if (!BuildConfig.TEM_ACESSO_A_SESSOES) {
+                    // A versão leve não enxerga o app de música. Dizer
+                    // isso na cara é o que evita a pessoa achar que o
+                    // app está quebrado quando ele está fazendo o
+                    // máximo que esta versão permite.
+                    Divider()
+                    Text(
+                        "Esta é a versão leve. Ela bloqueia o botão quando consegue recebê-lo " +
+                            "antes do player, mas não desfaz a pausa nem repassa os outros " +
+                            "comandos — para isso é preciso a versão completa, que exige acesso " +
+                            "a notificações.",
+                        fontSize = 13.sp,
+                    )
+                } else if (!capacidades.acessoANotificacoes) {
                     // Sem isto o app só observa. Dizer por que, e levar
                     // ao lugar certo — nunca ligar sozinho (§16).
                     Divider()

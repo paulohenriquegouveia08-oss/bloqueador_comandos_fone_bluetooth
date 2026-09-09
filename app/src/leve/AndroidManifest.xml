@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Versão LEVE — sem o serviço de acesso a notificações.
+
+  ## Por que ela existe
+
+  No Brasil, o Play Protect com "proteção antifraude aprimorada" BLOQUEIA
+  a instalação quando duas coisas coincidem: o app veio de navegador,
+  mensageiro ou gerenciador de arquivos, E pede acesso a SMS,
+  notificações ou acessibilidade.
+
+  A versão completa pede acesso a notificações — é assim que ela enxerga
+  o aplicativo de música. Legítimo, e ainda assim bloqueado, porque o
+  Play Protect não distingue o motivo.
+
+  Esta versão remove o serviço e por isso instala normalmente. O que ela
+  perde está no README: sem enxergar a sessão do player, ela não desfaz a
+  pausa nem repassa comandos — só bloqueia o que chega até ela pelo modo
+  captura.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <service
+            android:name=".service.MediaGuardNotificationListener"
+            tools:node="remove" />
+    </application>
+</manifest>

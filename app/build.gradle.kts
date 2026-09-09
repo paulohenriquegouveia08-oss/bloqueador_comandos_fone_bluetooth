@@ -54,6 +54,28 @@ android {
         }
     }
 
+    /**
+     * Dois sabores, por causa do Play Protect do Brasil.
+     *
+     * `completo` é o app como projetado. `leve` remove o serviço de
+     * notificações — a única coisa que o Play Protect sinaliza — para
+     * conseguir ser instalado por download. A diferença de capacidade
+     * está no README e na própria tela.
+     */
+    flavorDimensions += "distribuicao"
+    productFlavors {
+        create("completo") {
+            dimension = "distribuicao"
+            buildConfigField("boolean", "TEM_ACESSO_A_SESSOES", "true")
+        }
+        create("leve") {
+            dimension = "distribuicao"
+            applicationIdSuffix = ".leve"
+            versionNameSuffix = "-leve"
+            buildConfigField("boolean", "TEM_ACESSO_A_SESSOES", "false")
+        }
+    }
+
     buildTypes {
         release {
             // Assinado com chave própria, e não com a de depuração.
@@ -89,6 +111,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")

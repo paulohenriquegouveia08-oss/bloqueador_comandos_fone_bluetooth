@@ -98,8 +98,31 @@ E só. Nenhuma é ativada por código — o app leva você aos Ajustes e explica
 
 ## Instalar
 
-Baixe o APK da [página de versões](https://github.com/paulohenriquegouveia08-oss/bloqueador_comandos_fone_bluetooth/releases)
-e abra o arquivo no celular.
+### Qual APK baixar
+
+| Versão | Instala por download? | O que faz |
+| --- | --- | --- |
+| **leve** | **Sim** | Só bloqueia (modo captura). Não desfaz a pausa nem repassa comandos. |
+| **completa** | Não — precisa de ADB | Tudo: bloqueia, desfaz a pausa e repassa o que você não bloqueou. |
+
+**Por que existem duas.** No Brasil, o Play Protect com *proteção
+antifraude aprimorada* **bloqueia a instalação** de app que venha de
+navegador, mensageiro ou gerenciador de arquivos **e** peça acesso a SMS,
+notificações ou acessibilidade. A versão completa pede acesso a
+notificações — é assim que ela enxerga o aplicativo de música. É
+legítimo, e ainda assim bloqueado: o Play Protect não distingue o motivo.
+
+A versão leve não tem esse serviço e instala normalmente.
+
+### Instalar a completa por ADB
+
+O bloqueio vale para instalação por navegador e mensageiro. Pelo cabo é
+outro caminho:
+
+```bash
+# No celular: Opções do desenvolvedor → Depuração USB
+adb install -r BluetoothMediaGuard-completo.apk
+```
 
 O APK é **de release**: assinado com chave própria (v2+v3), não
 depurável, e sem permissões alarmantes. Ainda assim o Android pergunta se
