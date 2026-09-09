@@ -40,9 +40,6 @@ class MainActivity : ComponentActivity() {
                         abrirAcessoANotificacoes = {
                             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         },
-                        abrirAcessibilidade = {
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        },
                     )
                 }
             }
@@ -63,7 +60,6 @@ private val engine = MediaBlockerEngine()
 private fun TelaPrincipal(
     vm: GuardViewModel,
     abrirAcessoANotificacoes: () -> Unit,
-    abrirAcessibilidade: () -> Unit,
 ) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val capacidades by vm.capacidades.collectAsStateWithLifecycle()
@@ -166,17 +162,15 @@ private fun TelaPrincipal(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Diagnóstico", fontWeight = FontWeight.SemiBold)
                 LinhaDeEstado("Acesso a notificações", capacidades.acessoANotificacoes)
-                LinhaDeEstado("Sonda de teclas (acessibilidade)", capacidades.acessibilidadeAtiva)
                 LinhaDeEstado("Serviço de bloqueio", capacidades.servicoDeBloqueioAtivo)
 
                 Text(
-                    "O botão de mídia do fone Bluetooth não passa pelo sistema de teclas do " +
-                        "Android — ele vai direto para o aplicativo de música. Por isso a sonda " +
-                        "de acessibilidade serve para diagnóstico, e não para bloquear.",
+                    "O botão de mídia do fone vai direto para o aplicativo de música — o " +
+                        "Android não o entrega a mais ninguém no caminho. É por isso que o app " +
+                        "precisa ou receber o botão antes (modo captura), ou desfazer depois.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = abrirAcessibilidade) { Text("Abrir acessibilidade") }
             }
         }
 

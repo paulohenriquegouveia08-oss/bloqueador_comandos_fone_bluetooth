@@ -11,3 +11,8 @@ local.properties
 *.iml
 .idea/
 .DS_Store
+
+# Chave de assinatura e suas senhas — nunca no repositorio.
+keystore.properties
+*.keystore
+*.jks

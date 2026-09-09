@@ -80,19 +80,38 @@ diagnóstico**: se o seu aparelho for exceção, ele mostra isso.
 
 | Permissão | Para quê | Sem ela |
 | --- | --- | --- |
-| Acesso a notificações | Enxergar o app de música e mandar tocar de novo | O app só observa |
+| Acesso a notificações | Enxergar o app de música e agir sobre ele | O app não faz nada |
 | Notificações | O aviso permanente que o Android exige do serviço | O serviço não roda |
-| Bluetooth (conectar) | Mostrar o nome do fone no diagnóstico | Funciona, sem o nome |
-| Acessibilidade *(opcional)* | Sonda de teclas físicas | Diagnóstico menos completo |
 
-Nenhuma é ativada por código. O app leva você aos Ajustes e explica.
+E só. Nenhuma é ativada por código — o app leva você aos Ajustes e explica.
+
+**O que foi removido de propósito:**
+
+- **Serviço de acessibilidade.** Era a permissão mais sinalizada do
+  Android, e a pesquisa provou que ela **não recebe** o botão do fone
+  Bluetooth. Pedir uma permissão alarmante para algo que não funciona é
+  o pior negócio possível.
+- **`BLUETOOTH_CONNECT`.** Servia só para mostrar o nome do fone na
+  tela. Uma permissão sensível por um detalhe cosmético não se paga; o
+  nome vem do `AudioManager` quando o sistema o entrega, e fica genérico
+  quando não.
 
 ## Instalar
 
+Baixe o APK da [página de versões](https://github.com/paulohenriquegouveia08-oss/bloqueador_comandos_fone_bluetooth/releases)
+e abra o arquivo no celular.
+
+O APK é **de release**: assinado com chave própria (v2+v3), não
+depurável, e sem permissões alarmantes. Ainda assim o Android pergunta se
+você confia na origem — é o que ele faz com todo app de fora da Play
+Store, e não há como um app suprimir isso.
+
+Para compilar do código:
+
 ```bash
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-./gradlew :app:assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleRelease   # precisa de keystore.properties
+./gradlew :app:assembleDebug     # sem chave, para desenvolvimento
 ```
 
 ## Ativar

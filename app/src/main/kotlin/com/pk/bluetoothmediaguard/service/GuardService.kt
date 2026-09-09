@@ -105,9 +105,6 @@ class GuardService : Service() {
         GuardApplication.instancia.settingsRepository.settings
             .onEach { nova ->
                 configuracao = nova
-                // A sonda de acessibilidade lê daqui: ela não recebe
-                // dependências do sistema e não pode fazer I/O por tecla.
-                KeyProbeAccessibilityService.ultimaConfiguracao = nova
 
                 ajustarCaptura()
                 if (!nova.enabled) pararSozinho()

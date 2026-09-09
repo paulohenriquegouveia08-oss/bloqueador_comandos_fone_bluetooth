@@ -38,10 +38,14 @@ fone Bluetooth**. Ela vive no pipeline de input (InputDispatcher), que é
 justamente o pipeline que esses eventos contornam.
 
 Isso não é limitação de fabricante nem de versão: é o desenho do
-roteamento. Um `AccessibilityService` com `canRequestFilterKeyEvents`
-continua útil para teclas físicas do aparelho (volume, por exemplo), e
-por isso foi mantido no projeto — mas como **sonda de diagnóstico**, não
-como mecanismo de bloqueio. A tela de diagnóstico diz isso ao usuário.
+roteamento.
+
+**O serviço de acessibilidade foi REMOVIDO do projeto.** Ele chegou a
+existir como sonda de diagnóstico, mas é a permissão mais sinalizada do
+Android — dispara aviso do Play Protect na instalação e cai em
+"configuração restrita" no Android 13+. Manter uma permissão alarmante,
+que a própria pesquisa mostrou não receber o evento que interessa, custa
+a confiança de quem instala e não entrega nada em troca.
 
 ### Achado 2 — quem recebe o comando é decidido pelo sistema
 

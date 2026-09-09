@@ -3,7 +3,6 @@ package com.pk.bluetoothmediaguard.diagnostics
 import android.content.ComponentName
 import android.content.Context
 import android.provider.Settings
-import android.text.TextUtils
 
 /**
  * O que este aparelho, de fato, permite (§28).
@@ -14,7 +13,6 @@ import android.text.TextUtils
  */
 data class Capacidades(
     val acessoANotificacoes: Boolean,
-    val acessibilidadeAtiva: Boolean,
     val servicoDeBloqueioAtivo: Boolean,
     val sessoesVisiveis: Int,
 ) {
@@ -49,21 +47,5 @@ object DetectorDeCapacidades {
         return habilitados.split(":").any { entrada ->
             ComponentName.unflattenFromString(entrada)?.packageName == nossos
         }
-    }
-
-    /** A sonda de acessibilidade está ligada? */
-    fun temAcessibilidade(context: Context, servico: Class<*>): Boolean {
-        val esperado = ComponentName(context, servico).flattenToString()
-        val ligados = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-        ) ?: return false
-
-        val separador = TextUtils.SimpleStringSplitter(':')
-        separador.setString(ligados)
-        while (separador.hasNext()) {
-            if (separador.next().equals(esperado, ignoreCase = true)) return true
-        }
-        return false
     }
 }

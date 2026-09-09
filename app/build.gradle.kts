@@ -1,7 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+/**
+ * Credenciais da chave de release, fora do repositório.
+ *
+ * Sem o arquivo, o build de release sai SEM assinatura em vez de falhar:
+ * quem clona o projeto consegue compilar e testar; só quem tem a chave
+ * consegue produzir o APK que atualiza o app instalado.
+ */
+val chaveDeAssinatura = Properties().apply {
+    val arquivo = rootProject.file("keystore.properties")
+    if (arquivo.exists()) arquivo.inputStream().use { load(it) }
 }
 
 android {
@@ -20,9 +34,43 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val caminho = chaveDeAssinatura.getProperty("storeFile")
+            if (caminho != null) {
+                storeFile = file(caminho)
+                storePassword = chaveDeAssinatura.getProperty("storePassword")
+                keyAlias = chaveDeAssinatura.getProperty("keyAlias")
+                keyPassword = chaveDeAssinatura.getProperty("keyPassword")
+
+                // v2 e v3 ligados explicitamente. O v3 é o esquema que o
+                // Android moderno prefere e o que permite trocar a chave
+                // no futuro sem quebrar as atualizações; sem ele, o APK
+                // é verificado por um caminho mais antigo.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Assinado com chave própria, e não com a de depuração.
+            //
+            // Um APK de depuração é marcado como `debuggable` e assinado
+            // com a chave genérica do SDK — as duas coisas fazem o Play
+            // Protect tratá-lo como desconhecido e avisar na instalação.
+            signingConfig = if (chaveDeAssinatura.getProperty("storeFile") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                null
+            }
+
+            // Encolhe o APK e remove código não usado. Menos superfície
+            // para um scanner analisar, e download menor.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

@@ -9,7 +9,6 @@ import com.pk.bluetoothmediaguard.diagnostics.DetectorDeCapacidades
 import com.pk.bluetoothmediaguard.domain.GuardSettings
 import com.pk.bluetoothmediaguard.domain.RegistroDeEvento
 import com.pk.bluetoothmediaguard.service.GuardService
-import com.pk.bluetoothmediaguard.service.KeyProbeAccessibilityService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +28,6 @@ class GuardViewModel(app: Application) : AndroidViewModel(app) {
     private val _capacidades = MutableStateFlow(
         Capacidades(
             acessoANotificacoes = false,
-            acessibilidadeAtiva = false,
             servicoDeBloqueioAtivo = false,
             sessoesVisiveis = 0,
         ),
@@ -47,10 +45,6 @@ class GuardViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         _capacidades.value = Capacidades(
             acessoANotificacoes = DetectorDeCapacidades.temAcessoANotificacoes(ctx),
-            acessibilidadeAtiva = DetectorDeCapacidades.temAcessibilidade(
-                ctx,
-                KeyProbeAccessibilityService::class.java,
-            ),
             servicoDeBloqueioAtivo = settings.value.enabled,
             sessoesVisiveis = 0,
         )

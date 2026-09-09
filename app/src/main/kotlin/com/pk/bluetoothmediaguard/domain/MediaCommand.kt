@@ -60,9 +60,6 @@ enum class OrigemDoEvento {
 
     /** Observamos a sessão de outro app mudar de estado (MediaController). */
     SESSAO_DE_TERCEIRO,
-
-    /** Serviço de acessibilidade. Não recebe mídia de Bluetooth; serve a teclas físicas. */
-    ACESSIBILIDADE,
 }
 
 /**
