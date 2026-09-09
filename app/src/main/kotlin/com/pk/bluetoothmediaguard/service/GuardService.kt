@@ -19,6 +19,10 @@ import com.pk.bluetoothmediaguard.domain.MediaEvent
 import com.pk.bluetoothmediaguard.domain.OrigemDoEvento
 import com.pk.bluetoothmediaguard.domain.RegistroDeEvento
 import com.pk.bluetoothmediaguard.domain.ResultadoDoComando
+import android.content.ComponentName
+import android.media.session.MediaSessionManager
+import com.pk.bluetoothmediaguard.media.CapturadorDeBotoes
+import com.pk.bluetoothmediaguard.media.EncaminhadorDeComandos
 import com.pk.bluetoothmediaguard.presentation.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +51,8 @@ class GuardService : Service() {
     private val escopo = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var sessao: MediaSessionCompat
     private var configuracao = GuardSettings()
+    private val capturador = CapturadorDeBotoes()
+    private val encaminhador = EncaminhadorDeComandos()
 
     override fun onCreate() {
         super.onCreate()
@@ -54,6 +60,25 @@ class GuardService : Service() {
 
         sessao = MediaSessionCompat(this, "BluetoothMediaGuard").apply {
             setCallback(callbackDaSessao)
+            // O estado precisa anunciar as ações, senão o sistema não
+            // considera esta sessão candidata a receber botão.
+            setPlaybackState(
+                android.support.v4.media.session.PlaybackStateCompat.Builder()
+                    .setActions(
+                        android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY or
+                            android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE or
+                            android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                            android.support.v4.media.session.PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                            android.support.v4.media.session.PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                            android.support.v4.media.session.PlaybackStateCompat.ACTION_STOP,
+                    )
+                    .setState(
+                        android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING,
+                        0L,
+                        1f,
+                    )
+                    .build(),
+            )
             isActive = true
         }
 
@@ -63,6 +88,16 @@ class GuardService : Service() {
                 // A sonda de acessibilidade lê daqui: ela não recebe
                 // dependências do sistema e não pode fazer I/O por tecla.
                 KeyProbeAccessibilityService.ultimaConfiguracao = nova
+
+                // A captura acompanha a configuração: ligá-la e desligá-la
+                // no ar evita que a pessoa tenha de reiniciar o serviço
+                // para testar se funciona no aparelho dela.
+                if (nova.enabled && nova.modoCaptura) {
+                    if (!capturador.ativo) capturador.iniciar()
+                } else if (capturador.ativo) {
+                    capturador.parar()
+                }
+
                 if (!nova.enabled) pararSozinho()
             }
             .launchIn(escopo)
@@ -76,6 +111,7 @@ class GuardService : Service() {
     }
 
     override fun onDestroy() {
+        capturador.parar()
         sessao.isActive = false
         sessao.release()
         escopo.cancel()
@@ -100,25 +136,61 @@ class GuardService : Service() {
         override fun onRewind() = decidir(MediaCommand.REWIND)
     }
 
+    /**
+     * O botão chegou até nós. Aqui o bloqueio é real.
+     *
+     * Bloquear = não fazer nada: o comando morre neste ponto e nenhum
+     * player o recebe. Permitir = encaminhar à mão, porque ao virarmos o
+     * destinatário passamos a receber TODOS os botões, inclusive os que
+     * a pessoa quer funcionando.
+     */
     private fun decidir(comando: MediaCommand) {
         val app = GuardApplication.instancia
         val bloquear = app.blockerEngine.shouldBlock(comando, configuracao)
+        val evento = MediaEvent(
+            command = comando,
+            origem = OrigemDoEvento.NOSSA_SESSAO,
+            quandoMs = System.currentTimeMillis(),
+        )
 
+        if (bloquear) {
+            app.historyRepository.registrar(
+                RegistroDeEvento(
+                    evento,
+                    ResultadoDoComando.BLOQUEADO,
+                    "Recebido por nós e descartado — não chegou ao player.",
+                ),
+            )
+            return
+        }
+
+        val encaminhou = encaminhar(comando)
         app.historyRepository.registrar(
             RegistroDeEvento(
-                MediaEvent(
-                    command = comando,
-                    origem = OrigemDoEvento.NOSSA_SESSAO,
-                    quandoMs = System.currentTimeMillis(),
-                ),
-                if (bloquear) ResultadoDoComando.BLOQUEADO else ResultadoDoComando.DETECTADO,
-                if (bloquear) {
-                    "Nossa sessão recebeu o botão e não repassou."
+                evento,
+                if (encaminhou) ResultadoDoComando.PERMITIDO else ResultadoDoComando.DETECTADO,
+                if (encaminhou) {
+                    "Repassado ao aplicativo de música."
                 } else {
-                    "Nossa sessão recebeu o botão; não estava marcado para bloquear."
+                    "Não estava marcado para bloquear, e não havia player para repassar."
                 },
             ),
         )
+    }
+
+    /**
+     * Manda o comando ao player de verdade.
+     *
+     * Precisa do acesso a notificações — é ele que dá os controllers das
+     * sessões alheias. Sem a permissão, não há para onde repassar, e o
+     * histórico registra isso em vez de o comando sumir sem explicação.
+     */
+    private fun encaminhar(comando: MediaCommand): Boolean = try {
+        val componente = ComponentName(this, MediaGuardNotificationListener::class.java)
+        val gerenciador = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
+        encaminhador.encaminhar(comando, gerenciador.getActiveSessions(componente))
+    } catch (e: SecurityException) {
+        false
     }
 
     private fun pararSozinho() {

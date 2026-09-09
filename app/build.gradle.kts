@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.androidx.media)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
     testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(libs.androidx.junit)

@@ -2,24 +2,49 @@
 
 Impedir que o botão do fone Bluetooth pause sua música sozinho.
 
-> **Leia antes de instalar:** o Android **não permite** que um aplicativo
-> comum bloqueie o botão de mídia do fone enquanto outro app está
-> tocando. Isso não é limitação deste projeto — é o desenho do sistema, e
-> está demonstrado em [`docs/pesquisa-tecnica.md`](docs/pesquisa-tecnica.md).
-> O que este app faz, e o que não faz, está descrito abaixo sem rodeio.
+> **Leia antes de instalar:** o Android entrega o botão do fone
+> diretamente ao aplicativo de música — não há como um app comum
+> "interceptar no caminho". Ver [`docs/pesquisa-tecnica.md`](docs/pesquisa-tecnica.md).
+>
+> O app trabalha de duas formas: **desfazendo** a pausa (funciona sempre,
+> mas você ouve o corte) ou **recebendo o botão antes** do player (bloqueio
+> de verdade, e pode não funcionar no seu aparelho). Detalhes abaixo, sem
+> rodeio.
 
-## O que ele faz
+## Os dois modos
 
-| Situação | O que acontece | Como aparece no app |
-| --- | --- | --- |
-| Nada tocando, botão pressionado | O comando morre na nossa sessão | **Bloqueado** |
-| Spotify tocando, fone manda pausar | O Spotify pausa e o app manda tocar de novo | **Revertido** |
-| Comando que você não marcou | Segue para o player | **Permitido** |
-| Nem bloqueamos nem revertemos | Registrado com o motivo | **Não bloqueável** |
+### Padrão — desfazer
 
-**"Revertido" não é "bloqueado".** A música chega a parar por alguns
-décimos de segundo, e você vai ouvir o corte. O app usa palavras
-diferentes porque são coisas diferentes.
+O app observa o aplicativo de música. Quando o fone o pausa, manda tocar
+de novo. **Funciona em qualquer aparelho**, e a música chega a parar por
+alguns décimos de segundo — você ouve o corte. Aparece como
+**Revertido**, nunca como "bloqueado", porque são coisas diferentes.
+
+### Modo captura — bloquear de verdade
+
+Ligue *Bloqueio de verdade → Modo captura*. O app passa a tocar silêncio
+para entrar na fila de "quem tocou áudio por último", que é como o
+Android escolhe quem recebe o botão. Se conseguir, o comando **chega até
+nós e morre ali** — o player nem fica sabendo. Sem corte nenhum.
+
+O que ele **não** faz: pedir foco de áudio. Pedir mandaria o Spotify
+pausar, que é exatamente o problema. Foco é cooperativo — quem não pede,
+não interrompe.
+
+Os comandos que você **não** marcou são repassados ao player, senão
+proteger contra a pausa quebraria o "próxima" do fone.
+
+**Custos honestos:** gasta mais bateria (mantém o áudio acordado) e
+**pode não funcionar** — a escolha do destinatário é heurística do
+sistema e varia por versão e fabricante. O histórico mostra o que de
+fato aconteceu.
+
+| Situação | Como aparece |
+| --- | --- |
+| Recebemos o botão e descartamos | **Bloqueado** |
+| Player pausou e mandamos tocar | **Revertido** |
+| Comando não marcado, repassado | **Permitido** |
+| Vimos e não conseguimos agir | **Não bloqueável** |
 
 ## Por que não dá para bloquear de verdade
 
@@ -100,7 +125,8 @@ gravado em disco de propósito: seria um arquivo com seu padrão de uso.
 | Projeto Kotlin + Compose compilando | Validação em aparelho real com fone |
 | MediaSession, listener de sessões, sonda de acessibilidade | Testes instrumentados executados |
 | Mapper, engine, debounce, DataStore, histórico | Ajuste do debounce com fone real |
-| **22 testes unitários** passando | Compatibilidade por fabricante |
+| **27 testes unitários** passando | Se o modo captura funciona neste aparelho |
+| Modo captura (bloqueio real) | Compatibilidade por fabricante |
 | APK debug | |
 
 **Nada aqui foi validado com um fone Bluetooth de verdade.** A lógica tem

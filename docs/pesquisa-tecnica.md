@@ -96,6 +96,33 @@ REVERTIDO       — chegou, o player obedeceu, e desfizemos em seguida
 NAO_INTERCEPTAVEL — vimos o efeito, e não conseguimos nem bloquear nem reverter
 ```
 
+## Depois da pesquisa: existe um caminho para bloqueio real
+
+O Achado 2 diz que o sistema escolhe o destinatário — e diz QUAL é o
+critério: no Android 8+, "o último app com MediaSession que **tocou áudio
+localmente**".
+
+Isso é uma porta. Não dá para pedir prioridade, mas dá para **satisfazer o
+critério**: manter uma sessão ativa e tocar áudio. O app toca silêncio, em
+volume zero, **sem pedir foco de áudio** — pedir foco mandaria o player
+pausar, que é o problema que ele existe para resolver. Foco é cooperativo:
+quem não pede, não interrompe ninguém.
+
+Se o sistema passar a entregar o botão a nós, o bloqueio é REAL: o comando
+morre na nossa sessão e o player nem fica sabendo. E os comandos não
+bloqueados são repassados à sessão do player, senão proteger contra a
+pausa quebraria o resto do fone.
+
+Isto é o `modoCaptura`, desligado por padrão. Duas razões, e as duas
+precisam ser ditas a quem liga:
+
+1. **Custa bateria** — mantém o caminho de áudio do aparelho acordado.
+2. **Pode não funcionar** — a heurística varia por versão e fabricante, e
+   um player tocando no momento pode continuar ganhando.
+
+O diagnóstico mostra se os botões passaram a chegar. Se não passarem, o
+app diz isso e continua desfazendo a pausa, que é o que sempre funciona.
+
 ## Limites que permanecem
 
 - Reverter uma pausa produz um corte audível de alguns décimos de segundo.

@@ -131,6 +131,38 @@ private fun TelaPrincipal(
         }
 
         Card {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Bloqueio de verdade", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Sem isto, o app só desfaz a pausa depois que ela acontece — e você ouve " +
+                        "o corte. Ligado, ele tenta receber o botão antes do aplicativo de " +
+                        "música, e aí o comando nem chega lá.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Modo captura", fontSize = 14.sp)
+                    Switch(
+                        checked = s.modoCaptura,
+                        enabled = s.enabled,
+                        onCheckedChange = { v -> vm.atualizar { it.copy(modoCaptura = v) } },
+                    )
+                }
+                Text(
+                    "Gasta mais bateria, porque mantém o áudio do aparelho acordado. E pode " +
+                        "não funcionar aqui: depende de como o seu Android escolhe quem recebe " +
+                        "o botão. O histórico abaixo mostra o que realmente aconteceu.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Card {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Diagnóstico", fontWeight = FontWeight.SemiBold)
                 LinhaDeEstado("Acesso a notificações", capacidades.acessoANotificacoes)

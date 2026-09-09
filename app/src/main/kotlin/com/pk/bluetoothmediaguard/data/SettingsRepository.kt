@@ -34,6 +34,7 @@ class SettingsRepository(private val context: Context) {
         val AUTO_START = booleanPreferencesKey("auto_start")
         val DIAGNOSTIC = booleanPreferencesKey("diagnostic_mode")
         val REVERTER = booleanPreferencesKey("reverter")
+        val CAPTURA = booleanPreferencesKey("modo_captura")
         val DEBOUNCE = longPreferencesKey("debounce_ms")
     }
 
@@ -51,6 +52,7 @@ class SettingsRepository(private val context: Context) {
             autoStart = p[Chaves.AUTO_START] ?: padrao.autoStart,
             diagnosticMode = p[Chaves.DIAGNOSTIC] ?: padrao.diagnosticMode,
             reverterQuandoNaoBloquear = p[Chaves.REVERTER] ?: padrao.reverterQuandoNaoBloquear,
+            modoCaptura = p[Chaves.CAPTURA] ?: padrao.modoCaptura,
             // Preso à faixa mesmo vindo do disco: um valor absurdo
             // gravado por versão antiga não pode inutilizar o debounce.
             debounceMs = (p[Chaves.DEBOUNCE] ?: padrao.debounceMs)
@@ -71,6 +73,7 @@ class SettingsRepository(private val context: Context) {
             p[Chaves.AUTO_START] = s.autoStart
             p[Chaves.DIAGNOSTIC] = s.diagnosticMode
             p[Chaves.REVERTER] = s.reverterQuandoNaoBloquear
+            p[Chaves.CAPTURA] = s.modoCaptura
             p[Chaves.DEBOUNCE] =
                 s.debounceMs.coerceIn(GuardSettings.MIN_DEBOUNCE_MS, GuardSettings.MAX_DEBOUNCE_MS)
         }

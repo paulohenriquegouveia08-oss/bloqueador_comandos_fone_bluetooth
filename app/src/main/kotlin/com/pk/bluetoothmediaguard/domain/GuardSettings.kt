@@ -33,6 +33,18 @@ data class GuardSettings(
      * corte deixa desligado.
      */
     val reverterQuandoNaoBloquear: Boolean = true,
+    /**
+     * Tentar ser o destinatário dos botões, em vez de só observar.
+     *
+     * É a única forma de BLOQUEAR de verdade com outro app tocando: o
+     * sistema entrega o botão a quem tocou áudio por último, então o app
+     * toca silêncio para entrar nessa fila.
+     *
+     * Desligado por padrão porque tem custo real — mantém o caminho de
+     * áudio acordado e gasta bateria — e porque pode não funcionar neste
+     * aparelho. Quem liga precisa saber os dois.
+     */
+    val modoCaptura: Boolean = false,
     val debounceMs: Long = PADRAO_DEBOUNCE_MS,
 ) {
     companion object {
