@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Bluetooth Media Guard</string>
+    <string name="nome_sonda_acessibilidade">Bluetooth Media Guard — sonda de teclas</string>
+    <string name="descricao_sonda_acessibilidade">Observa eventos de tecla para o diagnóstico do fone. Não lê o conteúdo da tela e não envia nada para fora do aparelho.</string>
+    <string name="notificacao_ativo">Bloqueio de mídia ativo</string>
+    <string name="canal_servico">Serviço de bloqueio</string>
+    <string name="canal_servico_descricao">Aviso permanente enquanto o bloqueio está ligado. O Android exige esta notificação para o serviço continuar rodando.</string>
+</resources>

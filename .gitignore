@@ -1,0 +1,13 @@
+# Saída de build — regenerável, e o APK sozinho tem 9 MB.
+build/
+.gradle/
+/captures
+.externalNativeBuild
+.cxx
+
+# Caminho do SDK: é da máquina de quem clonou, não do projeto.
+local.properties
+
+*.iml
+.idea/
+.DS_Store
