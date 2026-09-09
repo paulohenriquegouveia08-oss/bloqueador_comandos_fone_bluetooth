@@ -121,6 +121,14 @@ class MediaGuardNotificationListener : NotificationListenerService() {
             val anterior = estadoAnterior
             estadoAnterior = novo
 
+            // O player começou a tocar: ele passou na nossa frente na
+            // fila de "quem tocou por último", e o próximo botão iria
+            // para ele. Reassumimos a posição agora, e não quando o botão
+            // chegar — aí já seria tarde.
+            if (novo == PlaybackState.STATE_PLAYING && anterior != PlaybackState.STATE_PLAYING) {
+                GuardService.reassumirPrioridade()
+            }
+
             // Só interessa a transição TOCANDO → PAUSADO. É a que a
             // pessoa reclama. Qualquer outra é uso normal.
             val virouPausa = anterior == PlaybackState.STATE_PLAYING &&

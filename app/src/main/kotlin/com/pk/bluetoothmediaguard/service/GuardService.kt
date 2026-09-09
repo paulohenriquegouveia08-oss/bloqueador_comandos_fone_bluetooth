@@ -13,7 +13,11 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import com.pk.bluetoothmediaguard.GuardApplication
 import com.pk.bluetoothmediaguard.R
+import android.media.session.MediaController
+import android.media.session.PlaybackState
 import com.pk.bluetoothmediaguard.domain.DecisaoDeCaptura
+import com.pk.bluetoothmediaguard.domain.VerificadorDeBloqueio
+import com.pk.bluetoothmediaguard.domain.VerificadorDeBloqueio.EstadoDoPlayer
 import com.pk.bluetoothmediaguard.domain.GuardSettings
 import com.pk.bluetoothmediaguard.domain.MediaCommand
 import com.pk.bluetoothmediaguard.domain.MediaEvent
@@ -65,9 +69,10 @@ class GuardService : Service() {
      * ligada seria gastar bateria o dia inteiro protegendo de nada. O
      * custo passa a existir só enquanto o fone está no ouvido.
      */
+    private val principal = Handler(Looper.getMainLooper())
     private var foneConectado = false
     private val monitorDeFone by lazy {
-        MonitorDeFone(this, Handler(Looper.getMainLooper())) { conectado ->
+        MonitorDeFone(this, principal) { conectado ->
             foneConectado = conectado
             ajustarCaptura()
         }
@@ -76,6 +81,7 @@ class GuardService : Service() {
     override fun onCreate() {
         super.onCreate()
         criarCanal()
+        instanciaViva = this
         monitorDeFone.iniciar()
 
         sessao = MediaSessionCompat(this, "BluetoothMediaGuard").apply {
@@ -120,6 +126,7 @@ class GuardService : Service() {
     }
 
     override fun onDestroy() {
+        instanciaViva = null
         monitorDeFone.parar()
         capturador.parar()
         sessao.isActive = false
@@ -164,13 +171,17 @@ class GuardService : Service() {
         )
 
         if (bloquear) {
-            app.historyRepository.registrar(
-                RegistroDeEvento(
-                    evento,
-                    ResultadoDoComando.BLOQUEADO,
-                    "Recebido por nós e descartado — não chegou ao player.",
-                ),
-            )
+            // NÃO registramos "bloqueado" aqui.
+            //
+            // Não temos evidência nenhuma neste ponto: só sabemos que a
+            // regra manda bloquear. Se a captura não pegou, o comando foi
+            // para o player do mesmo jeito e a música parou — e dizer
+            // "bloqueado" seria mentir justamente sobre a única coisa que
+            // este app promete.
+            //
+            // A evidência é observável: o player continuou tocando?
+            val antes = estadoDoPlayer()
+            principal.postDelayed({ conferirBloqueio(evento, antes) }, VerificadorDeBloqueio.ESPERA_MS)
             return
         }
 
@@ -195,13 +206,8 @@ class GuardService : Service() {
      * sessões alheias. Sem a permissão, não há para onde repassar, e o
      * histórico registra isso em vez de o comando sumir sem explicação.
      */
-    private fun encaminhar(comando: MediaCommand): Boolean = try {
-        val componente = ComponentName(this, MediaGuardNotificationListener::class.java)
-        val gerenciador = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
-        encaminhador.encaminhar(comando, gerenciador.getActiveSessions(componente))
-    } catch (e: SecurityException) {
-        false
-    }
+    private fun encaminhar(comando: MediaCommand): Boolean =
+        encaminhador.encaminhar(comando, sessoesDeTerceiros())
 
     /**
      * Liga ou desliga o silêncio conforme a situação REAL.
@@ -225,6 +231,75 @@ class GuardService : Service() {
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(ID_NOTIFICACAO, montarNotificacao())
         }
+    }
+
+    /**
+     * O player continuou tocando? Então bloqueamos de verdade.
+     *
+     * Se parou, o comando chegou lá — e o app diz isso, em vez de somar
+     * mais um "bloqueado" falso ao histórico. Quando a reversão está
+     * ligada, ainda dá tempo de desfazer: o resultado para quem ouve é o
+     * mesmo, e o registro passa a ser honesto sobre COMO foi conseguido.
+     */
+    private fun conferirBloqueio(evento: MediaEvent, antes: EstadoDoPlayer) {
+        val app = GuardApplication.instancia
+        val depois = estadoDoPlayer()
+        val veredito = VerificadorDeBloqueio.avaliar(antes, depois)
+
+        if (veredito == ResultadoDoComando.NAO_INTERCEPTAVEL && configuracao.reverterQuandoNaoBloquear) {
+            val voltou = mandarTocar()
+            app.historyRepository.registrar(
+                RegistroDeEvento(
+                    evento,
+                    if (voltou) ResultadoDoComando.REVERTIDO else ResultadoDoComando.NAO_INTERCEPTAVEL,
+                    if (voltou) {
+                        "O comando chegou ao player e a música parou; mandamos tocar de novo."
+                    } else {
+                        VerificadorDeBloqueio.explicar(ResultadoDoComando.NAO_INTERCEPTAVEL)
+                    },
+                ),
+            )
+            return
+        }
+
+        app.historyRepository.registrar(
+            RegistroDeEvento(evento, veredito, VerificadorDeBloqueio.explicar(veredito)),
+        )
+    }
+
+    /** O que o player está fazendo agora, do ponto de vista do verificador. */
+    private fun estadoDoPlayer(): EstadoDoPlayer {
+        val alvo = sessoesDeTerceiros().let { encaminhador.escolherAlvo(it) }
+            ?: return EstadoDoPlayer.DESCONHECIDO
+
+        return when (alvo.playbackState?.state) {
+            PlaybackState.STATE_PLAYING -> EstadoDoPlayer.TOCANDO
+            PlaybackState.STATE_PAUSED, PlaybackState.STATE_STOPPED -> EstadoDoPlayer.PAUSADO
+            else -> EstadoDoPlayer.DESCONHECIDO
+        }
+    }
+
+    private fun mandarTocar(): Boolean = try {
+        encaminhador.escolherAlvo(sessoesDeTerceiros())?.let {
+            it.transportControls.play()
+            true
+        } ?: false
+    } catch (e: SecurityException) {
+        false
+    }
+
+    /**
+     * As sessões dos outros aplicativos.
+     *
+     * Depende do acesso a notificações. Sem ele — a versão leve — não há
+     * como conferir nada, e o verificador devolve DESCONHECIDO: o app
+     * passa a dizer "detectado", que é a verdade, em vez de "bloqueado".
+     */
+    private fun sessoesDeTerceiros(): List<MediaController> = try {
+        val componente = ComponentName(this, MediaGuardNotificationListener::class.java)
+        (getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager).getActiveSessions(componente)
+    } catch (e: SecurityException) {
+        emptyList()
     }
 
     private fun pararSozinho() {
@@ -267,6 +342,32 @@ class GuardService : Service() {
     }
 
     companion object {
+        /**
+         * Reassumir a frente da fila.
+         *
+         * O sistema entrega o botão a quem tocou áudio POR ÚLTIMO. Quando
+         * o Spotify começa a tocar, ele passa na nossa frente — e o botão
+         * seguinte vai para ele.
+         *
+         * Reiniciar o silêncio nesse instante nos devolve a posição. É
+         * chamado pelo observador de sessões, que é quem vê o player
+         * começar; sem esse gatilho, a captura funcionaria só até a
+         * primeira música e depois pararia de pegar, sem explicação.
+         */
+        @Volatile
+        private var instanciaViva: GuardService? = null
+
+        fun reassumirPrioridade() {
+            instanciaViva?.let { servico ->
+                servico.principal.post {
+                    if (DecisaoDeCaptura.deveCapturar(servico.configuracao, servico.foneConectado)) {
+                        servico.capturador.parar()
+                        servico.capturador.iniciar()
+                    }
+                }
+            }
+        }
+
         private const val CANAL = "guard_service"
         private const val ID_NOTIFICACAO = 1
 

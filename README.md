@@ -55,10 +55,17 @@ o que de fato aconteceu.
 
 | Situação | Como aparece |
 | --- | --- |
-| Recebemos o botão e descartamos | **Bloqueado** |
-| Player pausou e mandamos tocar | **Revertido** |
-| Comando não marcado, repassado | **Permitido** |
-| Vimos e não conseguimos agir | **Não bloqueável** |
+| Conferimos: a música continuou tocando | **Bloqueado** |
+| A música parou e mandamos tocar de novo | **Revertido** |
+| Comando não marcado, repassado ao player | **Permitido** |
+| A música parou e não deu para desfazer | **Não bloqueável** |
+| Não deu para conferir o que houve | **Detectado** |
+
+**"Bloqueado" agora é uma afirmação conferida.** O app espera 400 ms e
+olha se o player continuou tocando. Antes ele escrevia "bloqueado" só
+porque a regra mandava bloquear — e mentia sempre que a captura não
+pegava. Um app cujo valor inteiro é dizer a verdade sobre o que conseguiu
+fazer não pode errar justamente nisso.
 
 ## Por que não dá para bloquear de verdade
 
@@ -181,7 +188,7 @@ gravado em disco de propósito: seria um arquivo com seu padrão de uso.
 | Projeto Kotlin + Compose compilando | Validação em aparelho real com fone |
 | MediaSession, listener de sessões, sonda de acessibilidade | Testes instrumentados executados |
 | Mapper, engine, debounce, DataStore, histórico | Ajuste do debounce com fone real |
-| **32 testes unitários** passando | Se o modo captura funciona neste aparelho |
+| **37 testes unitários** passando | Se o modo captura funciona neste aparelho |
 | Modo captura (bloqueio real) | Compatibilidade por fabricante |
 | APK debug | |
 
