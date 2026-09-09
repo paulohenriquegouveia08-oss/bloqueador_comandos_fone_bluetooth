@@ -48,6 +48,9 @@ class CapturadorDeBotoes {
         if (trilha != null) return true
 
         return try {
+            // 8 kHz, mono, 16 bits: o mínimo que o Android aceita como
+            // reprodução de mídia. Cada Hz e cada canal a mais seria
+            // trabalho do DSP para produzir o mesmo silêncio.
             val taxa = 8_000
             val tamanho = AudioTrack.getMinBufferSize(
                 taxa,
@@ -73,7 +76,17 @@ class CapturadorDeBotoes {
                         .build(),
                 )
                 .setBufferSizeInBytes(tamanho)
+                // MODE_STATIC + laço no hardware: o buffer é escrito UMA
+                // vez e o próprio caminho de áudio o repete. O modo
+                // STREAM exigiria o app acordar para alimentar o buffer
+                // várias vezes por segundo — que é o que faria o celular
+                // esquentar.
                 .setTransferMode(AudioTrack.MODE_STATIC)
+                // Diz ao sistema que latência não importa aqui. Ele então
+                // usa buffers maiores e acorda o DSP com menos
+                // frequência, que é exatamente a troca que queremos: o
+                // som é silêncio, ninguém percebe atraso.
+                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_POWER_SAVING)
                 .build()
 
             // Zeros: silêncio digital. E o volume em 0 por cima, para o
@@ -109,6 +122,9 @@ class CapturadorDeBotoes {
 
     private companion object {
         const val TAG = "CapturadorDeBotoes"
+        // O buffer é escrito uma vez e repetido pelo hardware; grande
+        // demais só ocuparia memória, pequeno demais faria o laço
+        // reiniciar com mais frequência.
 
         /** Buffer pequeno: é silêncio em repetição, não conteúdo. */
         const val BUFFER_MINIMO = 4096

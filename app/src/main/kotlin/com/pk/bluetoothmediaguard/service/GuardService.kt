@@ -13,6 +13,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import com.pk.bluetoothmediaguard.GuardApplication
 import com.pk.bluetoothmediaguard.R
+import com.pk.bluetoothmediaguard.domain.DecisaoDeCaptura
 import com.pk.bluetoothmediaguard.domain.GuardSettings
 import com.pk.bluetoothmediaguard.domain.MediaCommand
 import com.pk.bluetoothmediaguard.domain.MediaEvent
@@ -21,6 +22,9 @@ import com.pk.bluetoothmediaguard.domain.RegistroDeEvento
 import com.pk.bluetoothmediaguard.domain.ResultadoDoComando
 import android.content.ComponentName
 import android.media.session.MediaSessionManager
+import android.os.Handler
+import android.os.Looper
+import com.pk.bluetoothmediaguard.bluetooth.MonitorDeFone
 import com.pk.bluetoothmediaguard.media.CapturadorDeBotoes
 import com.pk.bluetoothmediaguard.media.EncaminhadorDeComandos
 import com.pk.bluetoothmediaguard.presentation.MainActivity
@@ -54,9 +58,25 @@ class GuardService : Service() {
     private val capturador = CapturadorDeBotoes()
     private val encaminhador = EncaminhadorDeComandos()
 
+    /**
+     * A maior economia do app.
+     *
+     * Sem fone conectado não há botão para apertar, e manter a captura
+     * ligada seria gastar bateria o dia inteiro protegendo de nada. O
+     * custo passa a existir só enquanto o fone está no ouvido.
+     */
+    private var foneConectado = false
+    private val monitorDeFone by lazy {
+        MonitorDeFone(this, Handler(Looper.getMainLooper())) { conectado ->
+            foneConectado = conectado
+            ajustarCaptura()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         criarCanal()
+        monitorDeFone.iniciar()
 
         sessao = MediaSessionCompat(this, "BluetoothMediaGuard").apply {
             setCallback(callbackDaSessao)
@@ -89,15 +109,7 @@ class GuardService : Service() {
                 // dependências do sistema e não pode fazer I/O por tecla.
                 KeyProbeAccessibilityService.ultimaConfiguracao = nova
 
-                // A captura acompanha a configuração: ligá-la e desligá-la
-                // no ar evita que a pessoa tenha de reiniciar o serviço
-                // para testar se funciona no aparelho dela.
-                if (nova.enabled && nova.modoCaptura) {
-                    if (!capturador.ativo) capturador.iniciar()
-                } else if (capturador.ativo) {
-                    capturador.parar()
-                }
-
+                ajustarCaptura()
                 if (!nova.enabled) pararSozinho()
             }
             .launchIn(escopo)
@@ -111,6 +123,7 @@ class GuardService : Service() {
     }
 
     override fun onDestroy() {
+        monitorDeFone.parar()
         capturador.parar()
         sessao.isActive = false
         sessao.release()
@@ -193,6 +206,30 @@ class GuardService : Service() {
         false
     }
 
+    /**
+     * Liga ou desliga o silêncio conforme a situação REAL.
+     *
+     * Três condições, e todas precisam valer: a proteção ligada, o modo
+     * captura escolhido, e um fone de fato conectado. Falhar qualquer uma
+     * derruba a captura na hora — não faz sentido pagar o custo antes de
+     * ele servir para algo.
+     */
+    private fun ajustarCaptura() {
+        val deveCapturar = DecisaoDeCaptura.deveCapturar(configuracao, foneConectado)
+        when {
+            deveCapturar && !capturador.ativo -> capturador.iniciar()
+            !deveCapturar && capturador.ativo -> capturador.parar()
+        }
+
+        // A notificação reflete o estado REAL. Dizer "ativo" enquanto
+        // espera um fone faria a pessoa achar que está gastando bateria
+        // quando não está.
+        if (configuracao.enabled) {
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(ID_NOTIFICACAO, montarNotificacao())
+        }
+    }
+
     private fun pararSozinho() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -208,7 +245,7 @@ class GuardService : Service() {
 
         return NotificationCompat.Builder(this, CANAL)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notificacao_ativo))
+            .setContentText(DecisaoDeCaptura.descreverEstado(configuracao, foneConectado))
             .setSmallIcon(android.R.drawable.stat_sys_headset)
             .setContentIntent(abrir)
             .setOngoing(true)

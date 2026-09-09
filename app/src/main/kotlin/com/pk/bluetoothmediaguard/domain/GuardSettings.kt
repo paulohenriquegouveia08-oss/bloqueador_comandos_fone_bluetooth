@@ -71,3 +71,30 @@ data class GuardSettings(
         )
     }
 }
+
+/**
+ * Quando vale a pena pagar o custo do modo captura.
+ *
+ * Separado do serviço, e puro, porque é a função que decide o consumo de
+ * bateria do app inteiro — e é a única parte disso que dá para provar sem
+ * um aparelho na mão.
+ */
+object DecisaoDeCaptura {
+
+    /**
+     * As três condições são obrigatórias juntas.
+     *
+     * Sem fone conectado não há botão para apertar: manter o silêncio
+     * tocando seria gastar bateria o dia inteiro protegendo de nada.
+     */
+    fun deveCapturar(settings: GuardSettings, foneConectado: Boolean): Boolean =
+        settings.enabled && settings.modoCaptura && foneConectado
+
+    /** O que a notificação deve dizer, para não mentir sobre o estado. */
+    fun descreverEstado(settings: GuardSettings, foneConectado: Boolean): String = when {
+        !settings.enabled -> "Desativado"
+        !settings.modoCaptura -> "Ativo — desfazendo a pausa"
+        !foneConectado -> "Ativo — aguardando um fone"
+        else -> "Ativo — bloqueando no fone"
+    }
+}

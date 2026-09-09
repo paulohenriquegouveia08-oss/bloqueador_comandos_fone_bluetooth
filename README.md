@@ -34,10 +34,24 @@ não interrompe.
 Os comandos que você **não** marcou são repassados ao player, senão
 proteger contra a pausa quebraria o "próxima" do fone.
 
-**Custos honestos:** gasta mais bateria (mantém o áudio acordado) e
-**pode não funcionar** — a escolha do destinatário é heurística do
-sistema e varia por versão e fabricante. O histórico mostra o que de
-fato aconteceu.
+**Custo, e o que foi feito para reduzi-lo:**
+
+| Otimização | Efeito |
+| --- | --- |
+| Só toca com **fone conectado** | No resto do dia, custo zero |
+| `MODE_STATIC` + laço no hardware | O app não acorda para alimentar o buffer |
+| `PERFORMANCE_MODE_POWER_SAVING` | Buffers maiores, DSP acorda menos |
+| 8 kHz, mono, 16 bits | O mínimo que conta como reprodução |
+| Monitor por evento, sem consulta periódica | Nada acorda o processador em intervalo fixo |
+
+A maior delas é a primeira: sem fone conectado **não existe botão para
+apertar**, e manter o silêncio tocando seria gastar bateria o dia inteiro
+protegendo de nada. A notificação diz em qual dos estados o app está —
+"aguardando um fone" é o estado barato.
+
+**Ainda assim pode não funcionar:** a escolha do destinatário é
+heurística do sistema e varia por versão e fabricante. O histórico mostra
+o que de fato aconteceu.
 
 | Situação | Como aparece |
 | --- | --- |
@@ -125,7 +139,7 @@ gravado em disco de propósito: seria um arquivo com seu padrão de uso.
 | Projeto Kotlin + Compose compilando | Validação em aparelho real com fone |
 | MediaSession, listener de sessões, sonda de acessibilidade | Testes instrumentados executados |
 | Mapper, engine, debounce, DataStore, histórico | Ajuste do debounce com fone real |
-| **27 testes unitários** passando | Se o modo captura funciona neste aparelho |
+| **32 testes unitários** passando | Se o modo captura funciona neste aparelho |
 | Modo captura (bloqueio real) | Compatibilidade por fabricante |
 | APK debug | |
 
